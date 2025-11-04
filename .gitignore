@@ -27,3 +27,7 @@ Thumbs.db
 # AWS
 .aws/
 
+# Lambda deployment package
+lambda_package/
+*.zip
+

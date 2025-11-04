@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from opensearchpy import OpenSearch
 import boto3
@@ -7,6 +8,15 @@ import os
 import uuid
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 bedrock = boto3.client('bedrock-runtime', region_name='eu-north-1')
 s3 = boto3.client('s3', region_name='eu-north-1')
