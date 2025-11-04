@@ -28,9 +28,7 @@ opensearch_client = None
 def get_opensearch_client():
     global opensearch_client
     if opensearch_client is None:
-        opensearch_endpoint = os.environ.get('OPENSEARCH_ENDPOINT')
-        if not opensearch_endpoint:
-            raise ValueError("OPENSEARCH_ENDPOINT environment variable not set")
+        opensearch_endpoint = 'vpc-smartassist-search1-u56375uz44djiy5akq47vbvikm.eu-north-1.es.amazonaws.com'
         
         opensearch_client = OpenSearch(
             hosts=[{'host': opensearch_endpoint, 'port': 443}],
