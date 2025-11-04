@@ -66,7 +66,7 @@ async def upload_document(file: UploadFile = File(...)):
 async def chat(query: str):
     # Generate query embedding
     embedding_response = bedrock.invoke_model(
-        modelId='amazon.titan-embed-text-v1',
+        modelId='amazon.titan-embed-text-v2:0',
         body=json.dumps({"inputText": query})
     )
     query_embedding = json.loads(embedding_response['body'].read())['embedding']
