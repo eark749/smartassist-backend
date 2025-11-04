@@ -22,14 +22,24 @@ bedrock = boto3.client('bedrock-runtime', region_name='eu-north-1')
 s3 = boto3.client('s3', region_name='eu-north-1')
 dynamodb = boto3.resource('dynamodb', region_name='eu-north-1')
 
-# OpenSearch configuration
-opensearch_client = OpenSearch(
-    hosts=[{'host': os.environ.get('OPENSEARCH_ENDPOINT', 'localhost'), 'port': 443}],
-    http_auth=(os.environ.get('OPENSEARCH_USER', 'admin'), os.environ.get('OPENSEARCH_PASSWORD', 'admin')),
-    use_ssl=True,
-    verify_certs=True,
-    ssl_show_warn=False
-)
+# OpenSearch client will be initialized on first use
+opensearch_client = None
+
+def get_opensearch_client():
+    global opensearch_client
+    if opensearch_client is None:
+        opensearch_endpoint = os.environ.get('OPENSEARCH_ENDPOINT')
+        if not opensearch_endpoint:
+            raise ValueError("OPENSEARCH_ENDPOINT environment variable not set")
+        
+        opensearch_client = OpenSearch(
+            hosts=[{'host': opensearch_endpoint, 'port': 443}],
+            http_auth=(os.environ.get('OPENSEARCH_USER', 'admin'), os.environ.get('OPENSEARCH_PASSWORD', 'admin')),
+            use_ssl=True,
+            verify_certs=True,
+            ssl_show_warn=False
+        )
+    return opensearch_client
 
 @app.get("/health")
 def health_check():
@@ -61,8 +71,11 @@ async def chat(query: str):
     )
     query_embedding = json.loads(embedding_response['body'].read())['embedding']
     
+    # Get OpenSearch client
+    os_client = get_opensearch_client()
+    
     # Search similar documents in OpenSearch
-    search_results = opensearch_client.search(
+    search_results = os_client.search(
         index='documents',
         body={
             'query': {
