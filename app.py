@@ -30,10 +30,10 @@ app.add_middleware(
 # AWS clients
 s3 = boto3.client('s3', region_name='eu-north-1')
 
-# LangChain Bedrock LLM - Use us-east-1 for Claude 3
+# LangChain Bedrock LLM - Claude 3.7 Sonnet (3.5 Sonnet v2)
 llm = ChatBedrock(
-    model_id="anthropic.claude-3-sonnet-20240229-v1:0",
-    region_name="us-east-1",
+    model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
+    region_name="eu-north-1",
     model_kwargs={"temperature": 0.7, "max_tokens": 1000}
 )
 
