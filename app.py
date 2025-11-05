@@ -74,38 +74,45 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/chat")
 async def chat(query: str):
-    # Generate query embedding
-    embedding_response = bedrock.invoke_model(
-        modelId='amazon.titan-embed-text-v2:0',
-        body=json.dumps({"inputText": query})
-    )
-    query_embedding = json.loads(embedding_response['body'].read())['embedding']
+    context = ""
+    sources = []
     
-    # Get OpenSearch client
-    os_client = get_opensearch_client()
-    
-    # Search similar documents in OpenSearch
-    search_results = os_client.search(
-        index='documents',
-        body={
-            'query': {
-                'knn': {
-                    'embeddings': {
-                        'vector': query_embedding,
-                        'k': 3
+    try:
+        # Try to get context from OpenSearch (RAG)
+        embedding_response = bedrock.invoke_model(
+            modelId='amazon.titan-embed-text-v2:0',
+            body=json.dumps({"inputText": query})
+        )
+        query_embedding = json.loads(embedding_response['body'].read())['embedding']
+        
+        os_client = get_opensearch_client()
+        search_results = os_client.search(
+            index='documents',
+            body={
+                'query': {
+                    'knn': {
+                        'embeddings': {
+                            'vector': query_embedding,
+                            'k': 3
+                        }
                     }
                 }
             }
-        }
-    )
+        )
+        
+        # Get relevant context
+        for hit in search_results['hits']['hits']:
+            context += hit['_source']['text'] + "\n\n"
+        
+        sources = search_results['hits']['hits']
     
-    # Get relevant context
-    context = ""
-    for hit in search_results['hits']['hits']:
-        context += hit['_source']['text'] + "\n\n"
+    except Exception as e:
+        # If index doesn't exist or search fails, continue without RAG context
+        print(f"OpenSearch search failed: {e}. Continuing without RAG context.")
     
-    # Generate response using Claude
-    prompt = f"""Use the following context to answer the question.
+    # Generate response using Claude (with or without context)
+    if context:
+        prompt = f"""Use the following context to answer the question.
 
 Context:
 {context}
@@ -113,6 +120,8 @@ Context:
 Question: {query}
 
 Answer:"""
+    else:
+        prompt = query
     
     response = bedrock.invoke_model(
         modelId='anthropic.claude-3-sonnet-20240229-v1:0',
@@ -130,5 +139,6 @@ Answer:"""
     
     return {
         "response": answer,
-        "sources": search_results['hits']['hits']
+        "sources": sources,
+        "rag_enabled": len(sources) > 0
     }
