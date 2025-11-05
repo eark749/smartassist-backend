@@ -185,42 +185,52 @@ async def upload_document(file: UploadFile = File(...)):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
-    Chat endpoint - uses direct Bedrock call for reliability
+    Intelligent chat endpoint with agent that decides when to use RAG.
+    Agent automatically searches documents when relevant to the query.
     """
     try:
-        # Use boto3 directly for Bedrock - more reliable
-        bedrock_runtime = boto3.client('bedrock-runtime', region_name='eu-north-1')
+        # Try using the intelligent agent first
+        from langchain_core.output_parsers import StrOutputParser
         
-        # Format request for Qwen model
-        request_body = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": request.query
+        try:
+            response = agent_executor.invoke({"input": request.query})
+            
+            # Use StrOutputParser to handle any response format
+            parser = StrOutputParser()
+            
+            # Get output - handle different response formats
+            if isinstance(response, dict):
+                output = response.get("output", "")
+            elif isinstance(response, str):
+                output = response
+            else:
+                output = str(response)
+            
+            # Parse the output
+            parsed_output = parser.parse(output) if output else ""
+            
+            if parsed_output:
+                return {
+                    "response": parsed_output,
+                    "agent_used": True,
+                    "rag_enabled": "SearchDocuments" in str(response)
                 }
-            ],
-            "max_tokens": 2048,
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
         
-        response = bedrock_runtime.invoke_model(
-            modelId='qwen2-5-32b-instruct-v1:0',
-            body=json.dumps(request_body)
-        )
+        except Exception as agent_error:
+            print(f"Agent failed: {agent_error}, falling back to direct LLM")
         
-        response_body = json.loads(response['body'].read())
+        # Fallback: Direct LLM call without agent
+        from langchain_core.messages import HumanMessage
+        from langchain_core.output_parsers import StrOutputParser
         
-        # Extract the response text
-        assistant_message = response_body.get('choices', [{}])[0].get('message', {}).get('content', '')
-        
-        if not assistant_message:
-            # Try alternative response format
-            assistant_message = response_body.get('output', {}).get('text', 'No response generated')
+        response = llm.invoke([HumanMessage(content=request.query)])
+        parser = StrOutputParser()
+        output = parser.parse(response.content)
         
         return {
-            "response": assistant_message,
-            "model": "qwen2-5-32b-instruct"
+            "response": output,
+            "agent_used": False,
+            "rag_enabled": False
         }
     
     except Exception as e:
