@@ -28,22 +28,23 @@ app.add_middleware(
 )
 
 # AWS clients
-s3 = boto3.client('s3', region_name='eu-north-1')
+AWS_REGION = os.environ.get('AWS_REGION', 'your-region')
+s3 = boto3.client('s3', region_name=AWS_REGION)
 
 # Amazon Nova Pro - Using direct boto3 for custom API format
 # LangChain doesn't fully support Nova's API format yet
-NOVA_MODEL_ID = "amazon.nova-pro-v1:0"
-NOVA_REGION = "eu-north-1"
+NOVA_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'amazon.nova-pro-v1:0')
+NOVA_REGION = AWS_REGION
 
-# Bedrock Embeddings - Use us-east-1 for Titan v2
+# Bedrock Embeddings
 embeddings = BedrockEmbeddings(
-    model_id="amazon.titan-embed-text-v2:0",
-    region_name="eu-north-1"
+    model_id=os.environ.get('EMBEDDING_MODEL_ID', 'amazon.titan-embed-text-v2:0'),
+    region_name=AWS_REGION
 )
 
 # OpenSearch configuration
-OPENSEARCH_ENDPOINT = 'vpc-smartassist-search1-u56375uz44djiy5akq47vbvikm.eu-north-1.es.amazonaws.com'
-OPENSEARCH_REGION = 'eu-north-1'
+OPENSEARCH_ENDPOINT = os.environ.get('OPENSEARCH_ENDPOINT', 'your-opensearch-endpoint.amazonaws.com')
+OPENSEARCH_REGION = os.environ.get('AWS_REGION', 'your-region')
 
 # Global vector store
 vector_store = None
@@ -163,7 +164,7 @@ async def upload_document(file: UploadFile = File(...)):
     """Upload a document to S3 (Lambda will process it)"""
     try:
         file_id = str(uuid.uuid4())
-        bucket_name = 'smartassist-documents-560615486015'
+        bucket_name = os.environ.get('S3_BUCKET_NAME', 'your-documents-bucket')
         
         # Upload to S3
         s3.upload_fileobj(

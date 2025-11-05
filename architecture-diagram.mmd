@@ -1,0 +1,158 @@
+graph TB
+
+    subgraph "User Layer"
+        User[👤 User Browser]
+    end
+
+    subgraph "Frontend - CloudFront & S3"
+        CF[☁️ CloudFront Distribution<br/>CDN & HTTPS]
+        S3F[📦 S3 Frontend Bucket<br/>React App Static Files]
+        CF --> S3F
+    end
+
+    subgraph "Authentication"
+        Cognito[🔐 Amazon Cognito<br/>User Pool<br/>Login/Signup]
+    end
+
+    subgraph "Load Balancing"
+        ALB[⚖️ Application Load Balancer<br/>smartassist-alb<br/>Port 80/443]
+    end
+
+    subgraph "Compute - ECS Fargate"
+        ECS[🐳 ECS Cluster<br/>smartassist-cluster]
+        Task1[📋 Task 1<br/>FastAPI Backend<br/>Port 8000]
+        Task2[📋 Task 2<br/>FastAPI Backend<br/>Port 8000]
+        ECS --> Task1
+        ECS --> Task2
+    end
+
+    subgraph "Container Registry"
+        ECR[📦 ECR Repository<br/>smartassist-backend<br/>Docker Images]
+    end
+
+    subgraph "Storage Layer"
+        S3D[📁 S3 Documents Bucket<br/>smartassist-documents<br/>PDF/Files Storage]
+        RDS[(💾 RDS PostgreSQL<br/>smartassist-db<br/>Metadata)]
+        DDB[(🗃️ DynamoDB Tables<br/>ChatHistory<br/>DocumentMetadata)]
+    end
+
+    subgraph "AI Processing Pipeline"
+        Lambda[⚡ Lambda Function<br/>smartassist-doc-processor<br/>Auto-triggered on upload]
+        Textract[📄 Amazon Textract<br/>Text Extraction]
+        Bedrock[🤖 Amazon Bedrock<br/>Claude 3.5 Sonnet<br/>+ Titan Embeddings]
+        OpenSearch[🔍 OpenSearch<br/>Vector Database<br/>Document Embeddings]
+    end
+
+    subgraph "CI/CD Pipeline"
+        GH[📚 GitHub<br/>Source Code]
+        CP[🔄 CodePipeline<br/>Orchestration]
+        CB[🏗️ CodeBuild<br/>Docker Build]
+        
+        GH -->|Push Code| CP
+        CP -->|Build| CB
+        CB -->|Push Image| ECR
+        CP -->|Deploy| ECS
+    end
+
+    subgraph "Networking - VPC"
+        VPC[🌐 VPC smartassist-vpc<br/>10.0.0.0/16]
+        PubSub1[Public Subnet 1a]
+        PubSub2[Public Subnet 1b]
+        PrivSub1[Private Subnet 1a]
+        PrivSub2[Private Subnet 1b]
+        IGW[🌍 Internet Gateway]
+        NAT[🔀 NAT Gateway]
+        
+        VPC --> PubSub1
+        VPC --> PubSub2
+        VPC --> PrivSub1
+        VPC --> PrivSub2
+        PubSub1 --> IGW
+        PubSub2 --> IGW
+        PrivSub1 --> NAT
+        PrivSub2 --> NAT
+    end
+
+    subgraph "Security & Monitoring"
+        SG[🛡️ Security Groups<br/>ALB-SG, Backend-SG,<br/>DB-SG, OpenSearch-SG]
+        IAM[👥 IAM Roles<br/>ECS Task Role<br/>Lambda Role<br/>CodeBuild Role]
+        CW[📊 CloudWatch<br/>Logs & Metrics<br/>Dashboards]
+        GD[🚨 GuardDuty<br/>Threat Detection]
+        SM[🔑 Secrets Manager<br/>DB Passwords<br/>API Keys]
+    end
+
+    %% User Flow
+    User -->|1. Access App| CF
+    User -->|2. Login/Signup| Cognito
+    Cognito -->|JWT Token| User
+
+    %% Frontend to Backend
+    CF -->|API Calls| ALB
+    ALB --> Task1
+    ALB --> Task2
+
+    %% Document Upload Flow
+    User -->|3. Upload Document| CF
+    Task1 -->|Upload to S3| S3D
+    S3D -->|Trigger Event| Lambda
+    Lambda -->|Extract Text| Textract
+    Lambda -->|Generate Embeddings| Bedrock
+    Lambda -->|Store Vectors| OpenSearch
+    Lambda -->|Save Metadata| DDB
+
+    %% Chat Query Flow
+    User -->|4. Ask Question| CF
+    Task1 -->|Query Embedding| Bedrock
+    Task1 -->|Vector Search| OpenSearch
+    OpenSearch -->|Return Context| Task1
+    Task1 -->|Generate Answer| Bedrock
+    Bedrock -->|AI Response| Task1
+    Task1 -->|Save Chat History| DDB
+    Task1 -->|Response| User
+
+    %% Backend Data Access
+    Task1 --> RDS
+    Task2 --> RDS
+    Task1 --> DDB
+    Task2 --> DDB
+    Task1 --> S3D
+    Task2 --> S3D
+
+    %% Network Placement
+    ALB -.->|Runs in| PubSub1
+    ALB -.->|Runs in| PubSub2
+    Task1 -.->|Runs in| PrivSub1
+    Task2 -.->|Runs in| PrivSub2
+    RDS -.->|Runs in| PrivSub1
+    OpenSearch -.->|Runs in| PrivSub1
+
+    %% Monitoring
+    Task1 --> CW
+    Task2 --> CW
+    Lambda --> CW
+    ALB --> CW
+    VPC --> GD
+
+    %% Security
+    Task1 --> SM
+    Lambda --> SM
+    IAM -.->|Permissions| Task1
+    IAM -.->|Permissions| Lambda
+    IAM -.->|Permissions| CB
+    SG -.->|Network Rules| ALB
+    SG -.->|Network Rules| Task1
+    SG -.->|Network Rules| RDS
+    SG -.->|Network Rules| OpenSearch
+
+    style User fill:#e1f5ff
+    style CF fill:#ff9800
+    style ALB fill:#4caf50
+    style ECS fill:#2196f3
+    style Lambda fill:#ffc107
+    style Bedrock fill:#9c27b0
+    style OpenSearch fill:#00bcd4
+    style S3D fill:#ff5722
+    style Cognito fill:#3f51b5
+    style VPC fill:#607d8b
+    style CW fill:#8bc34a
+
