@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from opensearchpy import OpenSearch
+from opensearchpy import OpenSearch, RequestsHttpConnection
+from requests_aws4auth import AWS4Auth
 import boto3
 import json
 import os
@@ -29,13 +30,24 @@ def get_opensearch_client():
     global opensearch_client
     if opensearch_client is None:
         opensearch_endpoint = 'vpc-smartassist-search1-u56375uz44djiy5akq47vbvikm.eu-north-1.es.amazonaws.com'
+        region = 'eu-north-1'
+        
+        # Use AWS IAM authentication
+        credentials = boto3.Session().get_credentials()
+        awsauth = AWS4Auth(
+            credentials.access_key,
+            credentials.secret_key,
+            region,
+            'es',
+            session_token=credentials.token
+        )
         
         opensearch_client = OpenSearch(
             hosts=[{'host': opensearch_endpoint, 'port': 443}],
-            http_auth=(os.environ.get('OPENSEARCH_USER', 'admin'), os.environ.get('OPENSEARCH_PASSWORD', 'admin')),
+            http_auth=awsauth,
             use_ssl=True,
             verify_certs=True,
-            ssl_show_warn=False
+            connection_class=RequestsHttpConnection
         )
     return opensearch_client
 
