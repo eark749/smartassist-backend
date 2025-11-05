@@ -40,7 +40,7 @@ llm = ChatBedrock(
 # Bedrock Embeddings - Use us-east-1 for Titan v2
 embeddings = BedrockEmbeddings(
     model_id="amazon.titan-embed-text-v2:0",
-    region_name="us-east-1"
+    region_name="eu-north-1"
 )
 
 # OpenSearch configuration
