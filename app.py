@@ -30,17 +30,17 @@ app.add_middleware(
 # AWS clients
 s3 = boto3.client('s3', region_name='eu-north-1')
 
-# LangChain Bedrock LLM
+# LangChain Bedrock LLM - Use us-east-1 for Claude 3
 llm = ChatBedrock(
     model_id="anthropic.claude-3-sonnet-20240229-v1:0",
-    region_name="eu-north-1",
+    region_name="us-east-1",
     model_kwargs={"temperature": 0.7, "max_tokens": 1000}
 )
 
-# Bedrock Embeddings
+# Bedrock Embeddings - Use us-east-1 for Titan v2
 embeddings = BedrockEmbeddings(
     model_id="amazon.titan-embed-text-v2:0",
-    region_name="eu-north-1"
+    region_name="us-east-1"
 )
 
 # OpenSearch configuration
