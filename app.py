@@ -33,7 +33,7 @@ s3 = boto3.client('s3', region_name='eu-north-1')
 # LangChain Bedrock LLM - DeepSeek V3
 llm = ChatBedrock(
     model_id="deepseek.v3-v1:0",
-    region_name="us-east-1",
+    region_name="eu-north-1",
     model_kwargs={"temperature": 0.7, "max_tokens": 4096}
 )
 
