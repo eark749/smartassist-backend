@@ -1,21 +1,21 @@
-# 🤖 SmartAssist - AI-Powered Document Assistant
+# SmartAssist - AI-Powered Document Assistant
 
 A production-ready RAG (Retrieval-Augmented Generation) system built on AWS, leveraging Amazon Bedrock, OpenSearch, and FastAPI to provide intelligent document-based Q&A capabilities.
 
-## 🏗️ Architecture
+## Architecture
 
 ![AWS Architecture](smartassist-architecture.png)
 
-## ✨ Features
+## Features
 
-- **📄 Document Upload & Processing**: Automatic text extraction using AWS Textract
-- **🔍 Vector Search**: Semantic search powered by OpenSearch with embeddings
-- **🤖 AI Chat**: Intelligent responses using Amazon Nova Pro (Bedrock)
-- **🚀 Scalable Infrastructure**: Containerized deployment on AWS ECS with auto-scaling
-- **🔄 CI/CD Pipeline**: Automated deployments via AWS CodePipeline and CodeBuild
-- **🔐 Secure**: IAM-based authentication with AWS services
+- **Document Upload & Processing**: Automatic text extraction using AWS Textract
+- **Vector Search**: Semantic search powered by OpenSearch with embeddings
+- **AI Chat**: Intelligent responses using Amazon Nova Pro (Bedrock)
+- **Scalable Infrastructure**: Containerized deployment on AWS ECS with auto-scaling
+- **CI/CD Pipeline**: Automated deployments via AWS CodePipeline and CodeBuild
+- **Secure**: IAM-based authentication with AWS services
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 - **FastAPI** - Modern Python web framework
@@ -33,14 +33,14 @@ A production-ready RAG (Retrieval-Augmented Generation) system built on AWS, lev
 - **Amazon ECR** - Container registry
 - **Application Load Balancer** - Traffic distribution
 
-## 📋 Prerequisites
+## Prerequisites
 
 - AWS Account with appropriate permissions
 - Docker installed locally
 - Python 3.11+
 - AWS CLI configured
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 
@@ -113,7 +113,7 @@ Content-Type: application/json
 }
 ```
 
-## 🏗️ AWS Deployment
+## AWS Deployment
 
 ### Step 1: Create Infrastructure
 
@@ -152,7 +152,7 @@ aws lambda update-function-code \
 
 Link S3 bucket to Lambda function for automatic document processing on upload.
 
-## 📊 Architecture Flow
+## Architecture Flow
 
 1. **Document Upload**:
    ```
@@ -169,7 +169,7 @@ Link S3 bucket to Lambda function for automatic document processing on upload.
    User → API (/chat) → OpenSearch (semantic search) → Bedrock (generate answer) → User
    ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### Bedrock Models
 
@@ -187,7 +187,7 @@ The system supports multiple Bedrock models:
 - Base image: `python:3.11-slim`
 - Platform: `linux/amd64` (for ECS compatibility)
 
-## 📝 File Structure
+## File Structure
 
 ```
 smartassist-backend/
@@ -203,15 +203,15 @@ smartassist-backend/
 └── README.md                  # This file
 ```
 
-## 🛡️ Security Best Practices
+## Security Best Practices
 
-- ✅ All credentials managed via environment variables
-- ✅ IAM roles for service-to-service authentication
-- ✅ No hardcoded secrets in code
-- ✅ HTTPS for all API communications
-- ✅ VPC isolation for OpenSearch
+- All credentials managed via environment variables
+- IAM roles for service-to-service authentication
+- No hardcoded secrets in code
+- HTTPS for all API communications
+- VPC isolation for OpenSearch
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -237,27 +237,4 @@ smartassist-backend/
 - ECS auto-scaling policies
 - CloudWatch monitoring and alerts
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 👤 Author
-
-**Your Name**
-- LinkedIn: [Your LinkedIn Profile](https://linkedin.com/in/yourprofile)
-- GitHub: [@yourusername](https://github.com/yourusername)
-
-## 🙏 Acknowledgments
-
-- Amazon Web Services for cloud infrastructure
-- FastAPI for the excellent web framework
-- LangChain for AI orchestration tools
-
----
-
-**Built with ❤️ using AWS and Python**
 
