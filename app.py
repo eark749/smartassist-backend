@@ -30,10 +30,10 @@ app.add_middleware(
 # AWS clients
 s3 = boto3.client('s3', region_name='eu-north-1')
 
-# LangChain Bedrock LLM - Qwen2.5 32B
+# LangChain Bedrock LLM - Claude Sonnet 4.0
 llm = ChatBedrock(
-    model_id="qwen2-5-32b-instruct-v1:0",
-    region_name="eu-north-1",
+    model_id="anthropic.claude-sonnet-4-0",
+    region_name="us-east-1",
     model_kwargs={"temperature": 0.7, "max_tokens": 2048}
 )
 
@@ -217,30 +217,15 @@ async def chat(request: ChatRequest):
                 }
         
         except Exception as agent_error:
-            print(f"Agent failed: {agent_error}, falling back to direct Bedrock call")
+            print(f"Agent failed: {agent_error}, falling back to direct LLM call")
         
-        # Fallback: Direct boto3 Bedrock call (LangChain doesn't support Qwen properly)
-        bedrock_runtime = boto3.client('bedrock-runtime', region_name='eu-north-1')
+        # Fallback: Direct LLM call without agent
+        from langchain_core.messages import HumanMessage
+        from langchain_core.output_parsers import StrOutputParser
         
-        request_body = {
-            "messages": [{"role": "user", "content": request.query}],
-            "max_tokens": 2048,
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
-        
-        bedrock_response = bedrock_runtime.invoke_model(
-            modelId='qwen2-5-32b-instruct-v1:0',
-            body=json.dumps(request_body)
-        )
-        
-        response_body = json.loads(bedrock_response['body'].read())
-        
-        # Extract response - Qwen uses 'choices' format
-        output = response_body.get('choices', [{}])[0].get('message', {}).get('content', '')
-        
-        if not output:
-            output = response_body.get('output', {}).get('text', 'No response generated')
+        response = llm.invoke([HumanMessage(content=request.query)])
+        parser = StrOutputParser()
+        output = parser.parse(response.content)
         
         return {
             "response": output,
