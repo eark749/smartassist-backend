@@ -30,12 +30,10 @@ app.add_middleware(
 # AWS clients
 s3 = boto3.client('s3', region_name='eu-north-1')
 
-# LangChain Bedrock LLM - Mistral Pixtral Large
-llm = ChatBedrock(
-    model_id="mistral.pixtral-large-2502-v1:0",
-    region_name="eu-north-1",
-    model_kwargs={"temperature": 0.7, "max_tokens": 4096}
-)
+# Amazon Nova Pro - Using direct boto3 for custom API format
+# LangChain doesn't fully support Nova's API format yet
+NOVA_MODEL_ID = "amazon.nova-pro-v1:0"
+NOVA_REGION = "eu-north-1"
 
 # Bedrock Embeddings - Use us-east-1 for Titan v2
 embeddings = BedrockEmbeddings(
@@ -185,52 +183,49 @@ async def upload_document(file: UploadFile = File(...)):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
-    Intelligent chat endpoint with agent that decides when to use RAG.
-    Agent automatically searches documents when relevant to the query.
+    Chat endpoint using Amazon Nova Pro with custom API format
     """
     try:
-        # Try using the intelligent agent first
-        from langchain_core.output_parsers import StrOutputParser
+        # Use direct boto3 for Amazon Nova Pro
+        bedrock_runtime = boto3.client('bedrock-runtime', region_name=NOVA_REGION)
         
-        try:
-            response = agent_executor.invoke({"input": request.query})
-            
-            # Use StrOutputParser to handle any response format
-            parser = StrOutputParser()
-            
-            # Get output - handle different response formats
-            if isinstance(response, dict):
-                output = response.get("output", "")
-            elif isinstance(response, str):
-                output = response
-            else:
-                output = str(response)
-            
-            # Parse the output
-            parsed_output = parser.parse(output) if output else ""
-            
-            if parsed_output:
-                return {
-                    "response": parsed_output,
-                    "agent_used": True,
-                    "rag_enabled": "SearchDocuments" in str(response)
+        # Format request according to Nova's API
+        request_body = {
+            "inferenceConfig": {
+                "max_new_tokens": 4096
+            },
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "text": request.query
+                        }
+                    ]
                 }
+            ]
+        }
         
-        except Exception as agent_error:
-            print(f"Agent failed: {agent_error}, falling back to direct LLM call")
+        response = bedrock_runtime.invoke_model(
+            modelId=NOVA_MODEL_ID,
+            body=json.dumps(request_body),
+            contentType="application/json",
+            accept="application/json"
+        )
         
-        # Fallback: Direct LLM call without agent
-        from langchain_core.messages import HumanMessage
-        from langchain_core.output_parsers import StrOutputParser
+        response_body = json.loads(response['body'].read())
         
-        response = llm.invoke([HumanMessage(content=request.query)])
-        parser = StrOutputParser()
-        output = parser.parse(response.content)
+        # Extract Nova's response
+        output_text = response_body.get('output', {}).get('message', {}).get('content', [{}])[0].get('text', '')
+        
+        if not output_text:
+            # Try alternative response format
+            output_text = response_body.get('completion', '')
         
         return {
-            "response": output,
-            "agent_used": False,
-            "rag_enabled": False
+            "response": output_text,
+            "model": "amazon-nova-pro",
+            "region": NOVA_REGION
         }
     
     except Exception as e:
