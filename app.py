@@ -189,29 +189,32 @@ async def chat(request: ChatRequest):
     The agent will automatically search documents when relevant.
     """
     try:
-        # Run the agent
-        response = agent_executor.invoke({"input": request.query})
+        # Try agent first
+        try:
+            response = agent_executor.invoke({"input": request.query})
+            output = response.get("output", "")
+            if output:
+                return {
+                    "response": output,
+                    "agent_used": True
+                }
+        except Exception as agent_error:
+            print(f"Agent failed: {agent_error}, falling back to direct LLM")
+        
+        # Fallback to direct LLM
+        from langchain_core.messages import HumanMessage
+        response = llm.invoke([HumanMessage(content=request.query)])
         
         return {
-            "response": response.get("output", "I couldn't generate a response."),
-            "agent_used": True
+            "response": response.content,
+            "agent_used": False
         }
     
     except Exception as e:
-        # Fallback to direct LLM if agent fails
-        try:
-            from langchain.schema import HumanMessage
-            response = llm.invoke([HumanMessage(content=request.query)])
-            return {
-                "response": response.content,
-                "agent_used": False,
-                "fallback": True
-            }
-        except Exception as fallback_error:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Chat failed: {str(e)}. Fallback also failed: {str(fallback_error)}"
-            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Chat failed: {str(e)}"
+        )
 
 @app.get("/")
 def root():
