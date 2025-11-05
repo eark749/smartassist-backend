@@ -217,15 +217,30 @@ async def chat(request: ChatRequest):
                 }
         
         except Exception as agent_error:
-            print(f"Agent failed: {agent_error}, falling back to direct LLM")
+            print(f"Agent failed: {agent_error}, falling back to direct Bedrock call")
         
-        # Fallback: Direct LLM call without agent
-        from langchain_core.messages import HumanMessage
-        from langchain_core.output_parsers import StrOutputParser
+        # Fallback: Direct boto3 Bedrock call (LangChain doesn't support Qwen properly)
+        bedrock_runtime = boto3.client('bedrock-runtime', region_name='eu-north-1')
         
-        response = llm.invoke([HumanMessage(content=request.query)])
-        parser = StrOutputParser()
-        output = parser.parse(response.content)
+        request_body = {
+            "messages": [{"role": "user", "content": request.query}],
+            "max_tokens": 2048,
+            "temperature": 0.7,
+            "top_p": 0.9
+        }
+        
+        bedrock_response = bedrock_runtime.invoke_model(
+            modelId='qwen2-5-32b-instruct-v1:0',
+            body=json.dumps(request_body)
+        )
+        
+        response_body = json.loads(bedrock_response['body'].read())
+        
+        # Extract response - Qwen uses 'choices' format
+        output = response_body.get('choices', [{}])[0].get('message', {}).get('content', '')
+        
+        if not output:
+            output = response_body.get('output', {}).get('text', 'No response generated')
         
         return {
             "response": output,
