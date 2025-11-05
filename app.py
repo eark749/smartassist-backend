@@ -185,32 +185,48 @@ async def upload_document(file: UploadFile = File(...)):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
-    Chat endpoint with intelligent agent that decides when to use RAG.
-    The agent will automatically search documents when relevant.
+    Chat endpoint - uses direct Bedrock call for reliability
     """
     try:
-        # Try agent first
-        try:
-            response = agent_executor.invoke({"input": request.query})
-            output = response.get("output", "")
-            if output:
-                return {
-                    "response": output,
-                    "agent_used": True
-                }
-        except Exception as agent_error:
-            print(f"Agent failed: {agent_error}, falling back to direct LLM")
+        # Use boto3 directly for Bedrock - more reliable
+        bedrock_runtime = boto3.client('bedrock-runtime', region_name='eu-north-1')
         
-        # Fallback to direct LLM
-        from langchain_core.messages import HumanMessage
-        response = llm.invoke([HumanMessage(content=request.query)])
+        # Format request for Qwen model
+        request_body = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": request.query
+                }
+            ],
+            "max_tokens": 2048,
+            "temperature": 0.7,
+            "top_p": 0.9
+        }
+        
+        response = bedrock_runtime.invoke_model(
+            modelId='qwen2-5-32b-instruct-v1:0',
+            body=json.dumps(request_body)
+        )
+        
+        response_body = json.loads(response['body'].read())
+        
+        # Extract the response text
+        assistant_message = response_body.get('choices', [{}])[0].get('message', {}).get('content', '')
+        
+        if not assistant_message:
+            # Try alternative response format
+            assistant_message = response_body.get('output', {}).get('text', 'No response generated')
         
         return {
-            "response": response.content,
-            "agent_used": False
+            "response": assistant_message,
+            "model": "qwen2-5-32b-instruct"
         }
     
     except Exception as e:
+        import traceback
+        print(f"Error: {e}")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Chat failed: {str(e)}"
