@@ -5,6 +5,6 @@ pydantic==2.5.0
 python-multipart==0.0.6
 opensearch-py==2.4.2
 requests-aws4auth==1.2.3
-langchain==0.1.0
-langchain-aws==0.1.0
-langchain-community==0.0.10
+langchain==0.1.20
+langchain-aws==0.1.6
+langchain-community==0.0.38
